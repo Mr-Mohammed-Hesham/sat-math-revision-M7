@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>امتحان SAT جديد | New SAT Exam</title>
+<meta name="description" content="امتحان SAT تفاعلي شامل - منصة مستر محمد هشام">
+<meta name="author" content="Mr. Mohammed Hesham">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Cairo', sans-serif; }
+body.en-mode { font-family: 'Inter', sans-serif; }
+.correct { background-color: #dcfce7 !important; border-color: #16a34a !important; }
+.incorrect { background-color: #fee2e2 !important; border-color: #dc2626 !important; }
+.timer-warning { color: #dc2626 !important; animation: pulse 1s infinite; }
+@keyframes pulse { 50% { opacity: 0.7; } }
+@media print { .no-print { display: none !important; } }
+.success-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 0.875rem; }
+.grade-excellent { background: #dcfce7; color: #166534; }
+.grade-good { background: #fef3c7; color: #92400e; }
+.grade-pass { background: #dbeafe; color: #1e40af; }
+.grade-fail { background: #fee2e2; color: #991b1b; }
+.lang-switch {
+position: fixed; top: 16px; left: 16px; z-index: 100;
+background: white; padding: 6px; border-radius: 30px;
+box-shadow: 0 4px 15px rgba(0,0,0,0.15); display: flex; gap: 4px;
+border: 2px solid #0d9488;
+}
+[dir="ltr"] .lang-switch { left: auto; right: 16px; }
+.lang-btn {
+padding: 6px 14px; border-radius: 20px; cursor: pointer; font-weight: bold;
+transition: all 0.3s; border: none; font-size: 0.875rem;
+background: transparent; color: #6b7280;
+}
+.lang-btn.active { background: #0d9488; color: white; box-shadow: 0 2px 6px rgba(13,148,136,0.4); }
+.lang-btn:hover:not(.active) { background: #f0fdfa; color: #0d9488; }
+.shuffle-badge {
+display: inline-block;
+background: linear-gradient(135deg, #0d9488, #0f766e);
+color: white; padding: 4px 12px; border-radius: 20px;
+font-size: 0.75rem; font-weight: bold; margin-right: 8px;
+animation: pulse 2s infinite;
+}
+.math-display {
+display: inline-block; direction: ltr;
+font-family: 'Times New Roman', 'Cambria Math', serif;
+font-size: 1.2em; font-style: italic;
+padding: 2px 8px; background: #f0fdfa;
+border-radius: 6px; margin: 2px;
+color: #0f766e; font-weight: 600; letter-spacing: 0.5px;
+}
+.save-indicator {
+position: fixed; bottom: 20px; left: 20px; z-index: 200;
+background: #10b981; color: white; padding: 8px 16px;
+border-radius: 20px; font-size: 0.8rem; font-weight: bold;
+opacity: 0; transition: opacity 0.3s; pointer-events: none;
+box-shadow: 0 4px 12px rgba(16,185,129,0.4);
+}
+.save-indicator.show { opacity: 1; }
+</style>
+</head>
+<body class="bg-gradient-to-br from-teal-50 to-emerald-50 text-gray-800 p-4 md:p-8 min-h-screen">
+<div class="lang-switch no-print">
+<button class="lang-btn active" onclick="setLanguage('ar')" id="btn-ar">عربي</button>
+<button class="lang-btn" onclick="setLanguage('en')" id="btn-en">EN</button>
+</div>
+<div id="saveIndicator" class="save-indicator">💾 <span data-ar="تم الحفظ" data-en="Saved">تم الحفظ</span></div>
+<div id="timer-container" class="max-w-4xl mx-auto mb-4 text-center no-print">
+<div class="bg-white p-4 rounded-2xl shadow-md inline-block border-2 border-teal-100">
+<span class="text-gray-600 ml-2" data-ar="⏰ الوقت المتبقي:" data-en="⏰ Time Remaining:">⏰ الوقت المتبقي:</span>
+<span id="timer" class="text-2xl font-bold text-teal-600 font-mono">60:00</span>
+<span class="shuffle-badge" data-ar="🎲 أسئلة عشوائية" data-en="🎲 Random Questions"> أسئلة عشوائية</span>
+</div>
+</div>
+<div class="max-w-4xl mx-auto mb-6 flex flex-wrap gap-3 justify-center no-print">
+<button onclick="toggleAnswers()" class="bg-teal-600 hover:bg-teal-700 text-white px-5 py-2 rounded-xl font-medium transition shadow cursor-pointer" data-ar="👀 إظهار / إخفاء الإجابات" data-en="👀 Show / Hide Answers">👀 إظهار / إخفاء الإجابات</button>
+<button onclick="window.print()" class="bg-gray-700 hover:bg-gray-900 text-white px-5 py-2 rounded-xl font-medium transition shadow cursor-pointer" data-ar="🖨️ طباعة" data-en="️ Print">🖨️ طباعة</button>
+<button onclick="reshuffleExam()" class="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white px-5 py-2 rounded-xl font-medium transition shadow cursor-pointer" data-ar="🔄 أسئلة جديدة" data-en="🔄 New Questions">🔄 أسئلة جديدة</button>
+<button onclick="clearProgress()" class="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl font-medium transition shadow cursor-pointer" data-ar="🗑️ مسح التقدم" data-en="🗑️ Clear Progress">🗑️ مسح التقدم</button>
+</div>
+<header class="max-w-4xl mx-auto bg-white p-6 rounded-2xl shadow-lg mb-8 border-4 border-teal-400">
+<div class="text-center">
+<h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-2" data-ar=" امتحان SAT جديد" data-en="📊 New SAT Exam">📊 امتحان SAT جديد</h1>
+<h2 class="text-lg text-teal-600 font-semibold" data-ar="اختبار SAT التفاعلي" data-en="Interactive SAT Test">اختبار SAT التفاعلي</h2>
+<p class="text-sm text-gray-600 mt-2" data-ar="27 سؤالاً في الرياضيات والتحليل البياني" data-en="27 Questions in Math & Graphical Analysis">27 سؤالاً في الرياضيات والتحليل البياني</p>
+<p class="text-xs text-green-600 mt-2 font-semibold" data-ar=" يتم حفظ تقدمك تلقائياً" data-en="💾 Your progress is saved automatically">💾 يتم حفظ تقدمك تلقائياً</p>
+</div>
+<div class="mt-4 flex flex-wrap justify-center gap-4 text-sm text-gray-600">
+<span><span data-ar="📅 التاريخ:" data-en="📅 Date:">📅 التاريخ:</span> <input type="text" id="examDate" class="border-b-2 border-teal-300 bg-transparent w-28 text-center"></span>
+<span><span data-ar="😊 الاسم:" data-en="😊 Name:">😊 الاسم:</span> <input type="text" id="studentName" class="border-b-2 border-teal-300 bg-transparent w-32 text-center" placeholder="اكتب اسمك"></span>
+<span><span data-ar="🏫 الشعبة:" data-en="🏫 Class:">🏫 الشعبة:</span> <input type="text" id="studentClass" class="border-b-2 border-teal-300 bg-transparent w-28 text-center" placeholder="الشعبة"></span>
+<span><span data-ar="⏰ المدة: 60 دقيقة" data-en="⏰ Duration: 60 min">⏰ المدة: 60 دقيقة</span></span>
+<span><span data-ar="📊 المجموع: 100 درجة" data-en=" Total: 100 pts">📊 المجموع: 100 درجة</span></span>
+</div>
+</header>
+<main class="max-w-4xl mx-auto space-y-8" id="exam-content"></main>
+<div class="text-center no-print pb-8 mt-8">
+<button onclick="gradeExam()" class="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-lg px-10 py-4 rounded-2xl font-bold shadow-xl transition transform hover:scale-105 cursor-pointer" data-ar="🎯 صحح إجاباتي!" data-en="🎯 Grade My Answers!">🎯 صحح إجاباتي!</button>
+</div>
+<div id="results-panel" class="max-w-4xl mx-auto mt-8 bg-white p-8 rounded-2xl shadow-2xl border-4 border-teal-400 hidden no-print">
+<h2 class="text-3xl font-bold text-gray-900 mb-6 text-center" data-ar="🏆 نتيجتك يا بطل! 🏆" data-en=" Your Results, Champion! 🏆"> نتيجتك يا بطل! 🏆</h2>
+<div class="grid md:grid-cols-3 gap-4 mb-6">
+<div class="bg-teal-50 p-4 rounded-xl text-center"><p data-ar="😊 الاسم" data-en="😊 Name">😊 الاسم</p><p id="res-name" class="font-bold text-xl text-teal-700">-</p></div>
+<div class="bg-emerald-50 p-4 rounded-xl text-center"><p data-ar="📅 التاريخ" data-en="📅 Date"> التاريخ</p><p id="res-date" class="font-bold text-xl text-emerald-700">-</p></div>
+<div class="bg-teal-50 p-4 rounded-xl text-center"><p data-ar="🌟 المجموع" data-en="🌟 Score">🌟 المجموع</p><p id="res-total" class="font-bold text-3xl text-teal-600">0 / 100</p></div>
+</div>
+<div class="text-center mb-6">
+<span id="success-badge" class="success-badge grade-excellent">-</span>
+<p id="success-percent" class="text-4xl font-bold text-teal-600 mt-2">0%</p>
+<p class="text-sm text-gray-500" data-ar="نسبة النجاح" data-en="Success Rate">نسبة النجاح</p>
+</div>
+<div class="text-center mb-6">
+<button id="sendEmailBtn" onclick="sendResultsToEmail()" class="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-lg px-8 py-3 rounded-2xl font-bold shadow-xl transition transform hover:scale-105 cursor-pointer" data-ar="📧 أرسل النتيجة للمعلم" data-en="📧 Send Results to Teacher">📧 أرسل النتيجة للمعلم</button>
+<p id="emailStatus" class="text-sm mt-2 text-center font-medium"></p>
+</div>
+<div class="flex gap-3 justify-center">
+<button onclick="window.print()" class="bg-gray-700 text-white px-6 py-3 rounded-xl font-semibold" data-ar="🖨️ طباعة النتيجة" data-en="🖨️ Print Results">🖨️ طباعة النتيجة</button>
+</div>
+</div>
+<footer class="max-w-4xl mx-auto mt-10 mb-8 text-center text-gray-500 text-sm no-print">
+© <span data-ar="امتحان SAT" data-en="SAT Exam">امتحان SAT</span> | Mr. Mohammed Hesham 📊
+</footer>
+<script>
+const PUBLIC_KEY = "Rb3Lq8tXaFmc5YHUH";
+const SERVICE_ID = "service_w15m64i";
+const TEMPLATE_ID = "template_5b0u2tq";
+const TARGET_EMAIL = "mohammedhesham872@gmail.com";
+emailjs.init(PUBLIC_KEY);
+const STORAGE_KEY = 'sat_new_exam_v1';
+const TOTAL_TIME = 3600;
+const TOTAL_QUESTIONS = 27;
+let currentSeed = null;
+let answersVisible = false;
+let saveIndicatorTimeout = null;
+function mulberry32(a) {
+return function() {
+var t = a += 0x6D2B79F5;
+t = Math.imul(t ^ t >>> 15, t | 1);
+t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+return ((t ^ t >>> 14) >>> 0) / 4294967296;
+}
+}
+let rng = null;
+function showSaveIndicator() {
+const indicator = document.getElementById('saveIndicator');
+indicator.classList.add('show');
+if (saveIndicatorTimeout) clearTimeout(saveIndicatorTimeout);
+saveIndicatorTimeout = setTimeout(() => indicator.classList.remove('show'), 1500);
+}
+function saveState(showIndicator = true) {
+try {
+const state = {
+seed: currentSeed, lang: currentLang,
+studentName: document.getElementById('studentName').value,
+studentClass: document.getElementById('studentClass').value,
+examDate: document.getElementById('examDate').value,
+answers: getSelectedAnswers(),
+timeRemaining: timeRemaining,
+answersVisible: answersVisible, savedAt: Date.now()
+};
+localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+if (showIndicator) showSaveIndicator();
+} catch (e) { console.error('خطأ في الحفظ:', e); }
+}
+function loadState() {
+try {
+const saved = localStorage.getItem(STORAGE_KEY);
+if (saved) return JSON.parse(saved);
+} catch (e) { console.error('خطأ في التحميل:', e); }
+return null;
+}
+function getSelectedAnswers() {
+const answers = {};
+for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+const selected = document.querySelector(`input[name="q${i}"]:checked`);
+if (selected) answers[i] = selected.value;
+}
+return answers;
+}
+function restoreAnswers(answers) {
+if (!answers) return;
+for (const [idx, val] of Object.entries(answers)) {
+const radio = document.querySelector(`input[name="q${idx}"][value="${val}"]`);
+if (radio) radio.checked = true;
+}
+}
+function clearProgress() {
+const confirmMsg = currentLang === 'ar' ? '⚠️ هل أنت متأكد من مسح كل التقدم؟' : '⚠️ Are you sure you want to clear all progress?';
+if (confirm(confirmMsg)) { localStorage.removeItem(STORAGE_KEY); location.reload(); }
+}
+function setupAnswerListeners() {
+document.getElementById('exam-content').addEventListener('change', (e) => {
+if (e.target.type === 'radio') saveState();
+});
+}
+function setupInputListeners() {
+['studentName', 'studentClass', 'examDate'].forEach(id => {
+const el = document.getElementById(id);
+if (el) {
+el.addEventListener('input', () => saveState(false));
+el.addEventListener('blur', () => saveState());
+}
+});
+}
+const originalExamData = {
+questions: [
+{
+q: { ar: 'بناءً على خط الاتجاه الأفضل في الرسم البياني، ما درجة الحرارة المتوقعة على ارتفاع 4,000 قدم؟', en: 'Based on the line of best fit in the graph, what is the expected temperature at 4,000 feet?' },
+options: [
+{ ar: '<span class="math-display">30°</span> فهرنهايت', en: '<span class="math-display">30°F</span>' },
+{ ar: '<span class="math-display">35°</span> فهرنهايت', en: '<span class="math-display">35°F</span>' },
+{ ar: '<span class="math-display">40°</span> فهرنهايت', en: '<span class="math-display">40°F</span>' },
+{ ar: '<span class="math-display">45°</span> فهرنهايت', en: '<span class="math-display">45°F</span>' }
+],
+correct: 1,
+answer: { ar: 'بالنزول عمودياً من النقطة 4,000 حتى نلامس الخط، ثم التحرك أفقياً لقراءة قيمة المحور الصادي، نجد أن القيمة تقارب 35° فهرنهايت.', en: 'By dropping vertically from 4,000 to the line, then moving horizontally to read the y-axis value, we find approximately 35°F.' }
+},
+{
+q: { ar: 'مستطيل P مساحته 72 بوصة مربعة. تم إزالة مستطيل أصغر مساحته 20 بوصة مربعة. ما مساحة المستطيل الناتج؟', en: 'Rectangle P has an area of 72 square inches. A smaller rectangle with area 20 square inches is removed. What is the area of the resulting rectangle?' },
+options: [
+{ ar: '<span class="math-display">32</span>', en: '<span class="math-display">32</span>' },
+{ ar: '<span class="math-display">42</span>', en: '<span class="math-display">42</span>' },
+{ ar: '<span class="math-display">52</span>', en: '<span class="math-display">52</span>' },
+{ ar: '<span class="math-display">62</span>', en: '<span class="math-display">62</span>' }
+],
+correct: 2,
+answer: { ar: 'المساحة = 72 - 20 = 52 بوصة مربعة.', en: 'Area = 72 - 20 = 52 square inches.' }
+},
+{
+q: { ar: 'إذا كانت <span class="math-display">p + 61 = 65</span>، فما قيمة p؟', en: 'If <span class="math-display">p + 61 = 65</span>, what is the value of p?' },
+options: [
+{ ar: '<span class="math-display">2</span>', en: '<span class="math-display">2</span>' },
+{ ar: '<span class="math-display">4</span>', en: '<span class="math-display">4</span>' },
+{ ar: '<span class="math-display">6</span>', en: '<span class="math-display">6</span>' },
+{ ar: '<span class="math-display">8</span>', en: '<span class="math-display">8</span>' }
+],
+correct: 1,
+answer: { ar: 'بطرح 61 من الطرفين: p = 65 - 61 = 4', en: 'Subtracting 61 from both sides: p = 65 - 61 = 4' }
+},
+{
+q: { ar: 'اشترى أحمد حبوب إفطار بسعر 2 دولار، وفراولة بسعر 1.90 دولار للرطل. إذا كان إجمالي الفاتورة 9.60 دولار، فما المعادلة التي تمثل هذا الموقف؟ (p = عدد أرطال الفراولة)', en: 'Ahmad bought cereal for $2 and strawberries for $1.90 per pound. If the total bill was $9.60, which equation represents this situation? (p = pounds of strawberries)' },
+options: [
+{ ar: '<span class="math-display">1.90p + 2 = 9.60</span>', en: '<span class="math-display">1.90p + 2 = 9.60</span>' },
+{ ar: '<span class="math-display">2p + 1.90 = 9.60</span>', en: '<span class="math-display">2p + 1.90 = 9.60</span>' },
+{ ar: '<span class="math-display">1.90p - 2 = 9.60</span>', en: '<span class="math-display">1.90p - 2 = 9.60</span>' },
+{ ar: '<span class="math-display">p + 3.90 = 9.60</span>', en: '<span class="math-display">p + 3.90 = 9.60</span>' }
+],
+correct: 0,
+answer: { ar: 'التكلفة الإجمالية = سعر الفراولة (1.90 × p) + سعر الحبوب (2) = 9.60', en: 'Total cost = strawberry price (1.90 × p) + cereal price (2) = 9.60' }
+},
+{
+q: { ar: 'كم يوماً كان فيها الشحن 0 كيلوواط/ساعة حسب الرسم البياني؟', en: 'According to the bar graph, how many days had 0 kWh of shipping?' },
+options: [
+{ ar: '<span class="math-display">2</span>', en: '<span class="math-display">2</span>' },
+{ ar: '<span class="math-display">3</span>', en: '<span class="math-display">3</span>' },
+{ ar: '<span class="math-display">4</span>', en: '<span class="math-display">4</span>' },
+{ ar: '<span class="math-display">5</span>', en: '<span class="math-display">5</span>' }
+],
+correct: 2,
+answer: { ar: 'قم بعد الأعمدة التي يصل ارتفاعها إلى الصفر تماماً على المحور الصادي.', en: 'Count the bars that reach exactly zero on the y-axis.' }
+},
+{
+q: { ar: 'معادلة الخط هي <span class="math-display">y = px + r</span>. إذا كان ميل الخط 9، فما قيمة p؟', en: 'The line equation is <span class="math-display">y = px + r</span>. If the slope is 9, what is the value of p?' },
+options: [
+{ ar: '<span class="math-display">3</span>', en: '<span class="math-display">3</span>' },
+{ ar: '<span class="math-display">6</span>', en: '<span class="math-display">6</span>' },
+{ ar: '<span class="math-display">9</span>', en: '<span class="math-display">9</span>' },
+{ ar: '<span class="math-display">12</span>', en: '<span class="math-display">12</span>' }
+],
+correct: 2,
+answer: { ar: 'الرقم p يمثل ميل الخط (Slope). بما أن الميل = 9، إذن p = 9', en: 'The number p represents the slope. Since slope = 9, then p = 9' }
+},
+{
+q: { ar: 'أوجد الإحداثي x لنقطة تقاطع الرسم <span class="math-display">y = x² - 8</span> مع المحور السيني.', en: 'Find the x-coordinate of the x-intercept of the graph <span class="math-display">y = x² - 8</span>.' },
+options: [
+{ ar: '<span class="math-display">±4</span>', en: '<span class="math-display">±4</span>' },
+{ ar: '<span class="math-display">±√8</span>', en: '<span class="math-display">±√8</span>' },
+{ ar: '<span class="math-display">8</span>', en: '<span class="math-display">8</span>' },
+{ ar: '<span class="math-display">-8</span>', en: '<span class="math-display">-8</span>' }
+],
+correct: 1,
+answer: { ar: 'نعوض y = 0: x² = 8، إذن x = ±√8', en: 'Substitute y = 0: x² = 8, so x = ±√8' }
+},
+{
+q: { ar: 'يمثل الرسم البياني قيمة جهاز إلكتروني مع مرور الوقت. ما القيمة التقديرية للجهاز عند شرائه (الشهر 0)؟', en: 'The graph shows the value of an electronic device over time. What is the estimated value of the device at purchase (month 0)?' },
+options: [
+{ ar: '<span class="math-display">$150</span>', en: '<span class="math-display">$150</span>' },
+{ ar: '<span class="math-display">$200</span>', en: '<span class="math-display">$200</span>' },
+{ ar: '<span class="math-display">$225</span>', en: '<span class="math-display">$225</span>' },
+{ ar: '<span class="math-display">$250</span>', en: '<span class="math-display">$250</span>' }
+],
+correct: 2,
+answer: { ar: 'الجزء المقطوع من محور y يمثل القيمة عند الشهر 0. من الرسم، القيمة عند x=0 هي 225 دولاراً.', en: 'The y-intercept represents the value at month 0. From the graph, the value at x=0 is $225.' }
+},
+{
+q: { ar: 'المثلثان ABC و GHI متطابقان. إذا كان قياس الزاوية E = 45°، فما قياس الزاوية J؟', en: 'Triangles ABC and GHI are congruent. If angle E = 45°, what is the measure of angle J?' },
+options: [
+{ ar: '<span class="math-display">35°</span>', en: '<span class="math-display">35°</span>' },
+{ ar: '<span class="math-display">45°</span>', en: '<span class="math-display">45°</span>' },
+{ ar: '<span class="math-display">55°</span>', en: '<span class="math-display">55°</span>' },
+{ ar: '<span class="math-display">65°</span>', en: '<span class="math-display">65°</span>' }
+],
+correct: 1,
+answer: { ar: 'المثلثان متطابقان، والزاوية E تقابلها الزاوية J. إذن قياس الزاوية J = 45°', en: 'The triangles are congruent, and angle E corresponds to angle J. So angle J = 45°' }
+},
+{
+q: { ar: 'إذا كانت <span class="math-display">f(x) = ½(x + 6)</span>، فما قيمة <span class="math-display">f(4)</span>؟', en: 'If <span class="math-display">f(x) = ½(x + 6)</span>, what is <span class="math-display">f(4)</span>?' },
+options: [
+{ ar: '<span class="math-display">3</span>', en: '<span class="math-display">3</span>' },
+{ ar: '<span class="math-display">4</span>', en: '<span class="math-display">4</span>' },
+{ ar: '<span class="math-display">5</span>', en: '<span class="math-display">5</span>' },
+{ ar: '<span class="math-display">6</span>', en: '<span class="math-display">6</span>' }
+],
+correct: 2,
+answer: { ar: 'f(4) = ½(4 + 6) = ½(10) = 5', en: 'f(4) = ½(4 + 6) = ½(10) = 5' }
+},
+{
+q: { ar: 'حل نظام المعادلات التالي بيانياً:', en: 'Solve the following system of equations graphically:' },
+options: [
+{ ar: 'نقطة التقاطع', en: 'Point of intersection' },
+{ ar: 'الميل', en: 'Slope' },
+{ ar: 'الجزء المقطوع', en: 'Intercept' },
+{ ar: 'المساحة', en: 'Area' }
+],
+correct: 0,
+answer: { ar: 'حل نظام المعادلات بيانياً هو نقطة تقاطع الرسمين.', en: 'The solution to a system of equations graphically is the point of intersection.' }
+},
+{
+q: { ar: 'أي من الأنظمة التالية له حلول لا نهائية؟', en: 'Which of the following systems has infinite solutions?' },
+options: [
+{ ar: '<span class="math-display">y = 6x + 3</span> و <span class="math-display">y = 6x + 5</span>', en: '<span class="math-display">y = 6x + 3</span> and <span class="math-display">y = 6x + 5</span>' },
+{ ar: '<span class="math-display">y = 6x + 3</span> و <span class="math-display">2y = 12x + 6</span>', en: '<span class="math-display">y = 6x + 3</span> and <span class="math-display">2y = 12x + 6</span>' },
+{ ar: '<span class="math-display">y = 6x + 3</span> و <span class="math-display">y = -6x + 3</span>', en: '<span class="math-display">y = 6x + 3</span> and <span class="math-display">y = -6x + 3</span>' },
+{ ar: '<span class="math-display">y = 6x + 3</span> و <span class="math-display">y = 3x + 6</span>', en: '<span class="math-display">y = 6x + 3</span> and <span class="math-display">y = 3x + 6</span>' }
+],
+correct: 1,
+answer: { ar: 'المعادلة 2y = 2(6x + 3) عند تبسيطها تعطي y = 6x + 3، وهي نفس المعادلة الأولى.', en: 'The equation 2y = 2(6x + 3) when simplified gives y = 6x + 3, which is the same as the first equation.' }
+},
+{
+q: { ar: 'إذا كانت <span class="math-display">p/6 + 18 = 54</span>، فما قيمة p؟', en: 'If <span class="math-display">p/6 + 18 = 54</span>, what is the value of p?' },
+options: [
+{ ar: '<span class="math-display">36</span>', en: '<span class="math-display">36</span>' },
+{ ar: '<span class="math-display">108</span>', en: '<span class="math-display">108</span>' },
+{ ar: '<span class="math-display">216</span>', en: '<span class="math-display">216</span>' },
+{ ar: '<span class="math-display">324</span>', en: '<span class="math-display">324</span>' }
+],
+correct: 2,
+answer: { ar: 'بطرح 18: p/6 = 36. بضرب الطرفين في 6: p = 216', en: 'Subtract 18: p/6 = 36. Multiply both sides by 6: p = 216' }
+},
+{
+q: { ar: 'حل نظام المعادلات: <span class="math-display">y = 9x + 12</span> و <span class="math-display">x + 7y = 20</span>', en: 'Solve the system: <span class="math-display">y = 9x + 12</span> and <span class="math-display">x + 7y = 20</span>' },
+options: [
+{ ar: '<span class="math-display">(-1, 3)</span>', en: '<span class="math-display">(-1, 3)</span>' },
+{ ar: '<span class="math-display">(1, 21)</span>', en: '<span class="math-display">(1, 21)</span>' },
+{ ar: '<span class="math-display">(2, 30)</span>', en: '<span class="math-display">(2, 30)</span>' },
+{ ar: '<span class="math-display">(0, 12)</span>', en: '<span class="math-display">(0, 12)</span>' }
+],
+correct: 0,
+answer: { ar: 'بالتعويض: x + 7(9x + 12) = 20 ⇒ 64x = -64 ⇒ x = -1. ثم y = 9(-1) + 12 = 3', en: 'By substitution: x + 7(9x + 12) = 20 ⇒ 64x = -64 ⇒ x = -1. Then y = 9(-1) + 12 = 3' }
+},
+{
+q: { ar: 'معادلة الدائرة هي <span class="math-display">(x - 13)² + (y - k)² = 64</span>. ما نصف قطر الدائرة؟', en: 'The circle equation is <span class="math-display">(x - 13)² + (y - k)² = 64</span>. What is the radius?' },
+options: [
+{ ar: '<span class="math-display">4</span>', en: '<span class="math-display">4</span>' },
+{ ar: '<span class="math-display">8</span>', en: '<span class="math-display">8</span>' },
+{ ar: '<span class="math-display">13</span>', en: '<span class="math-display">13</span>' },
+{ ar: '<span class="math-display">64</span>', en: '<span class="math-display">64</span>' }
+],
+correct: 1,
+answer: { ar: 'نصف القطر = √64 = 8', en: 'Radius = √64 = 8' }
+},
+{
+q: { ar: 'إذا كانت <span class="math-display">f(x) = 3x² - 2x</span>، فأوجد قيمة a التي تجعل <span class="math-display">f(a) - f(-a) = -15</span>', en: 'If <span class="math-display">f(x) = 3x² - 2x</span>, find the value of a that makes <span class="math-display">f(a) - f(-a) = -15</span>' },
+options: [
+{ ar: '<span class="math-display">2.5</span>', en: '<span class="math-display">2.5</span>' },
+{ ar: '<span class="math-display">3.75</span>', en: '<span class="math-display">3.75</span>' },
+{ ar: '<span class="math-display">5</span>', en: '<span class="math-display">5</span>' },
+{ ar: '<span class="math-display">7.5</span>', en: '<span class="math-display">7.5</span>' }
+],
+correct: 1,
+answer: { ar: 'f(a) - f(-a) = (3a² - 2a) - (3a² + 2a) = -4a = -15 ⇒ a = 3.75', en: 'f(a) - f(-a) = (3a² - 2a) - (3a² + 2a) = -4a = -15 ⇒ a = 3.75' }
+},
+{
+q: { ar: 'أي من الدوال التالية يوضح القيمة الابتدائية c = 33 بشكل مباشر؟', en: 'Which of the following functions directly shows the initial value c = 33?' },
+options: [
+{ ar: '<span class="math-display">f(x) = 33 + 1.5x</span>', en: '<span class="math-display">f(x) = 33 + 1.5x</span>' },
+{ ar: '<span class="math-display">f(x) = 33(1.5)^x</span>', en: '<span class="math-display">f(x) = 33(1.5)^x</span>' },
+{ ar: '<span class="math-display">f(x) = 1.5(33)^x</span>', en: '<span class="math-display">f(x) = 1.5(33)^x</span>' },
+{ ar: '<span class="math-display">f(x) = 33x + 1.5</span>', en: '<span class="math-display">f(x) = 33x + 1.5</span>' }
+],
+correct: 1,
+answer: { ar: 'في الصيغة القياسية f(x) = c(b)^x، الرقم c هو القيمة الابتدائية. الخيار B يوضح c = 33.', en: 'In standard form f(x) = c(b)^x, c is the initial value. Option B shows c = 33.' }
+},
+{
+q: { ar: 'الدالة <span class="math-display">f(t) = 40,000(2)^(t/790)</span> تمثل عدد البكتيريا. بعد كم دقيقة يتضاعف العدد؟', en: 'The function <span class="math-display">f(t) = 40,000(2)^(t/790)</span> represents bacteria count. After how many minutes does it double?' },
+options: [
+{ ar: '<span class="math-display">395</span>', en: '<span class="math-display">395</span>' },
+{ ar: '<span class="math-display">790</span>', en: '<span class="math-display">790</span>' },
+{ ar: '<span class="math-display">1580</span>', en: '<span class="math-display">1580</span>' },
+{ ar: '<span class="math-display">40,000</span>', en: '<span class="math-display">40,000</span>' }
+],
+correct: 1,
+answer: { ar: 'الأساس هو 2، مما يعني أن العدد يتضاعف عندما يكون الأس = 1. إذن t/790 = 1 ⇒ t = 790', en: 'The base is 2, meaning it doubles when the exponent = 1. So t/790 = 1 ⇒ t = 790' }
+},
+{
+q: { ar: 'أعد ترتيب المعادلة لعزل المتغير n.', en: 'Rearrange the equation to isolate the variable n.' },
+options: [
+{ ar: 'استخدم العمليات العكسية', en: 'Use inverse operations' },
+{ ar: 'استخدم الجمع فقط', en: 'Use addition only' },
+{ ar: 'استخدم الطرح فقط', en: 'Use subtraction only' },
+{ ar: 'لا يمكن العزل', en: 'Cannot isolate' }
+],
+correct: 0,
+answer: { ar: 'لعزل المتغير، نستخدم العمليات العكسية (الضرب، القسمة، الجذر التربيعي).', en: 'To isolate the variable, we use inverse operations (multiplication, division, square root).' }
+},
+{
+q: { ar: 'احسب معدل التغير المتوسط للدالة بين x = 5 و x = 7 من الرسم البياني.', en: 'Calculate the average rate of change of the function between x = 5 and x = 7 from the graph.' },
+options: [
+{ ar: '<span class="math-display">(y₂ - y₁)/(x₂ - x₁)</span>', en: '<span class="math-display">(y₂ - y₁)/(x₂ - x₁)</span>' },
+{ ar: '<span class="math-display">(x₂ - x₁)/(y₂ - y₁)</span>', en: '<span class="math-display">(x₂ - x₁)/(y₂ - y₁)</span>' },
+{ ar: '<span class="math-display">y₂ + y₁</span>', en: '<span class="math-display">y₂ + y₁</span>' },
+{ ar: '<span class="math-display">x₂ + x₁</span>', en: '<span class="math-display">x₂ + x₁</span>' }
+],
+correct: 0,
+answer: { ar: 'معدل التغير المتوسط = (y₂ - y₁)/(x₂ - x₁)', en: 'Average rate of change = (y₂ - y₁)/(x₂ - x₁)' }
+},
+{
+q: { ar: 'مبيعات سبتمبر = s. مبيعات أغسطس = 3s + 15. إذا كان المجموع 363، فما مبيعات سبتمبر؟', en: 'September sales = s. August sales = 3s + 15. If the total is 363, what are September sales?' },
+options: [
+{ ar: '<span class="math-display">72</span>', en: '<span class="math-display">72</span>' },
+{ ar: '<span class="math-display">87</span>', en: '<span class="math-display">87</span>' },
+{ ar: '<span class="math-display">95</span>', en: '<span class="math-display">95</span>' },
+{ ar: '<span class="math-display">108</span>', en: '<span class="math-display">108</span>' }
+],
+correct: 1,
+answer: { ar: 's + (3s + 15) = 363 ⇒ 4s = 348 ⇒ s = 87', en: 's + (3s + 15) = 363 ⇒ 4s = 348 ⇒ s = 87' }
+},
+{
+q: { ar: 'النقطة P هي مركز دائرة. إذا كان PQ = PR = 9 ومحيط المثلث PQR = 31، فما طول QR؟', en: 'Point P is the center of a circle. If PQ = PR = 9 and the perimeter of triangle PQR = 31, what is the length of QR?' },
+options: [
+{ ar: '<span class="math-display">9</span>', en: '<span class="math-display">9</span>' },
+{ ar: '<span class="math-display">13</span>', en: '<span class="math-display">13</span>' },
+{ ar: '<span class="math-display">18</span>', en: '<span class="math-display">18</span>' },
+{ ar: '<span class="math-display">22</span>', en: '<span class="math-display">22</span>' }
+],
+correct: 1,
+answer: { ar: 'المحيط = 9 + 9 + QR = 31 ⇒ QR = 13', en: 'Perimeter = 9 + 9 + QR = 31 ⇒ QR = 13' }
+},
+{
+q: { ar: 'أربعة أعداد فردية متتالية: x, x+2, x+4, x+6. "حاصل ضرب 12 في الرابع" ≤ "مجموع الأول والثالث ناقص 26". ما المتباينة؟', en: 'Four consecutive odd numbers: x, x+2, x+4, x+6. "12 times the fourth" ≤ "sum of first and third minus 26". What is the inequality?' },
+options: [
+{ ar: '<span class="math-display">12(x+6) ≤ x + (x+4) - 26</span>', en: '<span class="math-display">12(x+6) ≤ x + (x+4) - 26</span>' },
+{ ar: '<span class="math-display">12x ≤ (x+2) + (x+6) - 26</span>', en: '<span class="math-display">12x ≤ (x+2) + (x+6) - 26</span>' },
+{ ar: '<span class="math-display">12(x+4) ≤ x + (x+6) - 26</span>', en: '<span class="math-display">12(x+4) ≤ x + (x+6) - 26</span>' },
+{ ar: '<span class="math-display">12(x+2) ≤ x + (x+4) + 26</span>', en: '<span class="math-display">12(x+2) ≤ x + (x+4) + 26</span>' }
+],
+correct: 0,
+answer: { ar: '12(x+6) ≤ x + (x+4) - 26', en: '12(x+6) ≤ x + (x+4) - 26' }
+},
+{
+q: { ar: 'لحساب الثابت s في معادلة الخط، ما الخطوة الأولى؟', en: 'To calculate the constant s in the line equation, what is the first step?' },
+options: [
+{ ar: 'احسب الميل m', en: 'Calculate slope m' },
+{ ar: 'أوجد الجزء المقطوع', en: 'Find the intercept' },
+{ ar: 'ارسم الخط', en: 'Draw the line' },
+{ ar: 'عوض بالصفر', en: 'Substitute zero' }
+],
+correct: 0,
+answer: { ar: 'الخطوة الأولى هي حساب الميل m باستخدام نقطتين من الجدول.', en: 'The first step is to calculate slope m using two points from the table.' }
+},
+{
+q: { ar: 'بما أن <span class="math-display">24° + 66° = 90°</span>، فما قيمة <span class="math-display">(sin 24°)(sin 24°) + (cos 24°)(cos 24°)</span>؟', en: 'Since <span class="math-display">24° + 66° = 90°</span>, what is the value of <span class="math-display">(sin 24°)(sin 24°) + (cos 24°)(cos 24°)</span>?' },
+options: [
+{ ar: '<span class="math-display">0</span>', en: '<span class="math-display">0</span>' },
+{ ar: '<span class="math-display">0.5</span>', en: '<span class="math-display">0.5</span>' },
+{ ar: '<span class="math-display">1</span>', en: '<span class="math-display">1</span>' },
+{ ar: '<span class="math-display">2</span>', en: '<span class="math-display">2</span>' }
+],
+correct: 2,
+answer: { ar: 'sin²(24°) + cos²(24°) = 1 (المتطابقة المثلثية الأساسية)', en: 'sin²(24°) + cos²(24°) = 1 (fundamental trigonometric identity)' }
+},
+{
+q: { ar: 'تكلفة استئجار سيارة: 52 دولار لليوم الأول، و26 دولار لكل يوم إضافي. ما معادلة التكلفة C(d) لـ d يوم؟', en: 'Car rental cost: $52 for the first day, $26 for each additional day. What is the cost equation C(d) for d days?' },
+options: [
+{ ar: '<span class="math-display">C(d) = 26 + 26d</span>', en: '<span class="math-display">C(d) = 26 + 26d</span>' },
+{ ar: '<span class="math-display">C(d) = 52 + 26d</span>', en: '<span class="math-display">C(d) = 52 + 26d</span>' },
+{ ar: '<span class="math-display">C(d) = 52 + 26(d-1)</span>', en: '<span class="math-display">C(d) = 52 + 26(d-1)</span>' },
+{ ar: '<span class="math-display">C(d) = 26d</span>', en: '<span class="math-display">C(d) = 26d</span>' }
+],
+correct: 0,
+answer: { ar: 'C(d) = 52 + 26(d-1) = 52 + 26d - 26 = 26d + 26', en: 'C(d) = 52 + 26(d-1) = 52 + 26d - 26 = 26d + 26' }
+},
+{
+q: { ar: 'لإيجاد القيمة التي عندها تصل الدالة إلى حدها الأدنى، ماذا نفعل؟', en: 'To find the value where the function reaches its minimum, what do we do?' },
+options: [
+{ ar: 'نشتق الدالة ونساوي المشتقة بالصفر', en: 'Differentiate and set derivative to zero' },
+{ ar: 'نعوض بصفر', en: 'Substitute zero' },
+{ ar: 'نرسم الدالة', en: 'Graph the function' },
+{ ar: 'نحسب التكامل', en: 'Calculate the integral' }
+],
+correct: 0,
+answer: { ar: 'نشتق الدالة f\'(x)، نساويها بالصفر لإيجاد النقاط الحرجة، ثم نتأكد من أن f\'\'(x) موجبة.', en: 'Differentiate f\'(x), set to zero to find critical points, then verify f\'\'(x) is positive.' }
+}
+]
+};
+function shuffleArray(array) {
+const arr = [...array];
+for (let i = arr.length - 1; i > 0; i--) {
+const j = Math.floor(rng() * (i + 1));
+[arr[i], arr[j]] = [arr[j], arr[i]];
+}
+return arr;
+}
+let examData;
+let correctAnswersMap = {};
+let currentLang = 'ar';
+let timeRemaining = TOTAL_TIME;
+let timerInterval;
+function prepareShuffledExam() {
+rng = mulberry32(currentSeed);
+examData = JSON.parse(JSON.stringify(originalExamData));
+correctAnswersMap = {};
+examData.questions = shuffleArray(examData.questions);
+examData.questions.forEach((q, idx) => {
+const optionsWithCorrect = q.options.map((opt, oIdx) => ({ option: opt, isCorrect: oIdx === q.correct }));
+const shuffledOptions = shuffleArray(optionsWithCorrect);
+q.options = shuffledOptions.map(o => o.option);
+q.correct = shuffledOptions.findIndex(o => o.isCorrect);
+correctAnswersMap[idx] = String.fromCharCode(97 + q.correct);
+});
+}
+function reshuffleExam() {
+const msg = currentLang === 'ar' ? '🔄 سيتم إنشاء أسئلة جديدة ومسح إجاباتك الحالية. هل أنت متأكد؟' : '🔄 New questions will be generated and current answers cleared. Are you sure?';
+if (confirm(msg)) {
+currentSeed = Date.now(); timeRemaining = TOTAL_TIME; answersVisible = false;
+prepareShuffledExam(); renderExam(); saveState();
+alert(currentLang === 'ar' ? '🎲 تم تغيير الأسئلة! حظاً موفقاً! 🍀' : '🎲 Questions changed! Good luck! ');
+window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+}
+function setLanguage(lang) {
+currentLang = lang;
+document.documentElement.lang = lang;
+document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+document.getElementById('btn-ar').classList.toggle('active', lang === 'ar');
+document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+document.body.classList.toggle('en-mode', lang === 'en');
+document.querySelectorAll('[data-ar][data-en]').forEach(el => {
+el.innerHTML = lang === 'ar' ? el.getAttribute('data-ar') : el.getAttribute('data-en');
+});
+renderExam(); saveState(false);
+}
+function renderExam() {
+const container = document.getElementById('exam-content');
+const labels = { ar: { option: ['أ', 'ب', 'ج', 'د'], answer: '✅ الإجابة:' }, en: { option: ['A', 'B', 'C', 'D'], answer: '✅ Answer:' } };
+const lbl = labels[currentLang]; const isRTL = currentLang === 'ar';
+let html = '';
+examData.questions.forEach((q, idx) => {
+const bs = isRTL ? 'border-r-4 pr-4' : 'border-l-4 pl-4';
+html += `<section class="bg-white p-6 rounded-2xl shadow-lg border-2 border-teal-100">
+<h3 class="text-lg font-bold mb-4 text-teal-700">${idx + 1}. ${q.q[currentLang]}</h3>
+<ol class="space-y-3 text-sm">`;
+q.options.forEach((opt, oIdx) => {
+const rs = isRTL ? 'mr-4 ml-2' : 'ml-4 mr-2';
+html += `<li>
+<label class="cursor-pointer block hover:bg-teal-50 rounded-lg p-2 transition">
+<input type="radio" name="q${idx}" value="${String.fromCharCode(97 + oIdx)}" class="${rs}">
+${lbl.option[oIdx]}) ${opt[currentLang]}
+</label>
+</li>`;
+});
+html += `<div class="answer-box text-green-700 mt-3 font-medium ${answersVisible ? '' : 'hidden'} bg-green-50 rounded-lg p-3">
+${lbl.answer} ${lbl.option[q.correct]}) ${q.options[q.correct][currentLang]}<br>
+<strong>${currentLang === 'ar' ? 'الشرح:' : 'Explanation:'}</strong> ${q.answer[currentLang]}
+</div>
+</ol></section>`;
+});
+container.innerHTML = html;
+}
+function startTimer() {
+updateTimerDisplay();
+timerInterval = setInterval(() => {
+timeRemaining--; updateTimerDisplay();
+if (timeRemaining % 60 === 0) saveState(false);
+if (timeRemaining <= 600) document.getElementById('timer').classList.add('timer-warning');
+if (timeRemaining <= 0) {
+clearInterval(timerInterval);
+alert(currentLang === 'ar' ? "⏰ انتهى الوقت!" : "⏰ Time's up!");
+gradeExam();
+}
+}, 1000);
+}
+function updateTimerDisplay() {
+const m = Math.floor(timeRemaining / 60); const s = timeRemaining % 60;
+document.getElementById('timer').textContent = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+}
+function toggleAnswers() {
+answersVisible = !answersVisible;
+document.querySelectorAll('.answer-box').forEach(el => el.classList.toggle('hidden', !answersVisible));
+saveState(false);
+}
+function gradeExam() {
+let correctCount = 0;
+for (let i = 0; i < TOTAL_QUESTIONS; i++) {
+const sel = document.querySelector(`input[name="q${i}"]:checked`);
+if (sel && sel.value === correctAnswersMap[i]) correctCount++;
+}
+const score = Math.round((correctCount / TOTAL_QUESTIONS) * 100);
+document.getElementById('res-total').textContent = `${score} / 100`;
+document.getElementById('res-name').textContent = document.getElementById('studentName').value || (currentLang === 'ar' ? 'بطل' : 'Champion');
+document.getElementById('res-date').textContent = new Date().toLocaleDateString(currentLang === 'ar' ? 'ar-AE' : 'en-US');
+const badge = document.getElementById('success-badge');
+document.getElementById('success-percent').textContent = `${score}%`;
+if (currentLang === 'ar') {
+if (score >= 90) { badge.textContent = '🌟 ممتاز جداً!'; badge.className = 'success-badge grade-excellent'; }
+else if (score >= 75) { badge.textContent = '👏 ممتاز!'; badge.className = 'success-badge grade-good'; }
+else if (score >= 50) { badge.textContent = '👍 جيد'; badge.className = 'success-badge grade-pass'; }
+else { badge.textContent = '💪 حاول مرة أخرى'; badge.className = 'success-badge grade-fail'; }
+} else {
+if (score >= 90) { badge.textContent = '🌟 Outstanding!'; badge.className = 'success-badge grade-excellent'; }
+else if (score >= 75) { badge.textContent = '👏 Excellent!'; badge.className = 'success-badge grade-good'; }
+else if (score >= 50) { badge.textContent = '👍 Good'; badge.className = 'success-badge grade-pass'; }
+else { badge.textContent = '💪 Try Again'; badge.className = 'success-badge grade-fail'; }
+}
+document.getElementById('results-panel').classList.remove('hidden');
+document.getElementById('results-panel').scrollIntoView({ behavior: 'smooth' });
+if (timerInterval) clearInterval(timerInterval);
+}
+function sendResultsToEmail() {
+const btn = document.getElementById('sendEmailBtn');
+const status = document.getElementById('emailStatus');
+btn.disabled = true;
+btn.textContent = currentLang === 'ar' ? '⏳ جاري الإرسال...' : '⏳ Sending...';
+const name = document.getElementById('studentName').value || 'N/A';
+const studentClass = document.getElementById('studentClass').value || 'N/A';
+const date = document.getElementById('examDate').value || new Date().toLocaleDateString();
+const score = document.getElementById('res-total').textContent;
+const successRate = document.getElementById('success-percent').textContent;
+const badge = document.getElementById('success-badge').textContent;
+let questionsHTML = '';
+examData.questions.forEach((q, idx) => {
+const sel = document.querySelector(`input[name="q${idx}"]:checked`);
+const sv = sel ? sel.value : null; const cv = correctAnswersMap[idx]; const ic = sv === cv;
+let sat = currentLang==='ar'?'❌ لم يجب':'❌ No answer'; let sac = '#dc2626';
+if (sv) { const si = sv.charCodeAt(0)-97; sat = q.options[si][currentLang]; sac = ic?'#059669':'#dc2626'; }
+const cat = q.options[q.correct][currentLang];
+const rb = ic?'#f0fdf4':'#fef2f2'; const bl = ic?'4px solid #10b981':'4px solid #ef4444';
+questionsHTML += `<tr style="background:${rb};border-right:${bl};"><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;font-weight:bold;">${idx+1}</td><td style="padding:10px;border:1px solid #e5e7eb;"><strong style="color:#0f766e;">${currentLang==='ar'?'❓ السؤال:':'❓ Question:'}</strong><br><span style="font-size:13px;">${q.q[currentLang]}</span></td><td style="padding:10px;border:1px solid #e5e7eb;"><strong style="color:${sac};">${currentLang==='ar'?'✍️ إجابتك:':'✍️ Your Answer:'}</strong><br><span style="color:${sac};font-size:13px;">${sat}</span></td><td style="padding:10px;border:1px solid #e5e7eb;"><strong style="color:#059669;">${currentLang==='ar'?'✅ الصحيحة:':'✅ Correct:'}</strong><br><span style="color:#059669;font-size:13px;">${cat}</span></td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;">${ic?'<span style="font-size:24px;">✅</span>':'<span style="font-size:24px;">❌</span>'}</td></tr>`;
+});
+const answersHTML = `<div style="font-family:'Segoe UI',Tahoma,Arial;direction:${currentLang==='ar'?'rtl':'ltr'};"><div style="background:linear-gradient(135deg,#0d9488,#0f766e);color:white;padding:20px;border-radius:10px 10px 0 0;text-align:center;"><h2 style="margin:0;">${currentLang==='ar'?'نتيجة امتحان SAT':'SAT Exam Result'}</h2></div><div style="background:#f0fdfa;padding:15px;"><table style="width:100%;border-collapse:collapse;"><tr><td style="padding:8px;font-weight:bold;color:#0f766e;">${currentLang==='ar'?'😊 الاسم:':'😊 Name:'}</td><td style="padding:8px;">${name}</td><td style="padding:8px;font-weight:bold;color:#0f766e;">${currentLang==='ar'?'🏫 الشعبة:':' Class:'}</td><td style="padding:8px;">${studentClass}</td></tr><tr><td style="padding:8px;font-weight:bold;color:#0f766e;">${currentLang==='ar'?' التاريخ:':'📅 Date:'}</td><td style="padding:8px;">${date}</td><td style="padding:8px;font-weight:bold;color:#0f766e;">${currentLang==='ar'?'🏆 التقدير:':'🏆 Grade:'}</td><td style="padding:8px;">${badge}</td></tr></table></div><div style="background:white;padding:20px;text-align:center;"><div style="display:inline-block;margin:0 15px;"><div style="font-size:32px;font-weight:bold;color:#0d9488;">${score}</div><div style="color:#6b7280;font-size:13px;">${currentLang==='ar'?'الدرجة':'Score'}</div></div><div style="display:inline-block;margin:0 15px;"><div style="font-size:32px;font-weight:bold;color:#059669;">${successRate}%</div><div style="color:#6b7280;font-size:13px;">${currentLang==='ar'?'النسبة':'Rate'}</div></div></div><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#0d9488;color:white;"><th style="padding:10px;border:1px solid #0f766e;">#</th><th style="padding:10px;border:1px solid #0f766e;">${currentLang==='ar'?'السؤال':'Question'}</th><th style="padding:10px;border:1px solid #0f766e;">${currentLang==='ar'?'إجابتك':'Your Answer'}</th><th style="padding:10px;border:1px solid #0f766e;">${currentLang==='ar'?'الصحيحة':'Correct'}</th><th style="padding:10px;border:1px solid #0f766e;">${currentLang==='ar'?'النتيجة':'Result'}</th></tr></thead><tbody>${questionsHTML}</tbody></table></div>`;
+emailjs.send(SERVICE_ID, TEMPLATE_ID, { to_email: TARGET_EMAIL, student_name: name, student_class: studentClass, exam_date: date, total_score: score, success_rate: successRate, grade: badge, answers_table: answersHTML }).then(() => {
+status.textContent = currentLang==='ar'?'✅ تم الإرسال بنجاح!':'✅ Sent successfully!'; status.style.color = '#059669'; btn.textContent = currentLang==='ar'?'✓ تم':'✓ Sent';
+}).catch(err => {
+status.textContent = currentLang==='ar'?'❌ حدث خطأ':'❌ Error'; status.style.color = '#dc2626'; btn.disabled = false; btn.textContent = currentLang==='ar'?'📧 حاول مرة أخرى':'📧 Try Again'; console.error(err);
+});
+}
+window.addEventListener('DOMContentLoaded', () => {
+const saved = loadState();
+if (saved && saved.seed) {
+currentSeed = saved.seed; currentLang = saved.lang || 'ar';
+timeRemaining = saved.timeRemaining !== undefined ? saved.timeRemaining : TOTAL_TIME;
+answersVisible = saved.answersVisible || false;
+document.documentElement.lang = currentLang;
+document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+document.getElementById('btn-ar').classList.toggle('active', currentLang === 'ar');
+document.getElementById('btn-en').classList.toggle('active', currentLang === 'en');
+document.body.classList.toggle('en-mode', currentLang === 'en');
+document.querySelectorAll('[data-ar][data-en]').forEach(el => { el.innerHTML = currentLang === 'ar' ? el.getAttribute('data-ar') : el.getAttribute('data-en'); });
+} else { currentSeed = Date.now(); }
+prepareShuffledExam(); renderExam();
+if (saved) {
+if (saved.studentName) document.getElementById('studentName').value = saved.studentName;
+if (saved.studentClass) document.getElementById('studentClass').value = saved.studentClass;
+if (saved.examDate) document.getElementById('examDate').value = saved.examDate;
+if (saved.answers) restoreAnswers(saved.answers);
+}
+setupAnswerListeners(); setupInputListeners(); startTimer();
+});
+window.addEventListener('beforeunload', () => saveState(false));
+</script>
+</body>
+</html>
